@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: playwatch
+
+before:
+  hooks:
+    - go mod verify
+
+builds:
+  - id: playwatch
+    main: ./cmd/playwatch
+    binary: playwatch
+    env:
+      - CGO_ENABLED=0
+    # Ansible only runs on Unix-like systems.
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+nfpms:
+  - id: packages
+    package_name: playwatch
+    homepage: https://github.com/axel-tpt/playwatch
+    maintainer: axel-tpt <axel.trepout@gmail.com>
+    description: A k9s-style terminal UI for Ansible.
+    formats: [deb, rpm, apk]
+    bindir: /usr/bin
+    # Ansible must be in $PATH at runtime; package names differ between
+    # distributions, so it is only recommended.
+    recommends:
+      - ansible
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - Merge pull request
+
+release:
+  draft: false
+  prerelease: auto
