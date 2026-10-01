@@ -1,0 +1,4 @@
+/playwatch
+/dist/
+*.retry
+__pycache__/

@@ -1,0 +1,79 @@
+{
+    "_meta": {
+        "hostvars": {
+            "bastion": {
+                "ansible_connection": "local",
+                "ansible_python_interpreter": "auto_silent"
+            },
+            "db1": {
+                "ansible_connection": "local",
+                "ansible_python_interpreter": "auto_silent",
+                "db_password": "not-a-real-secret",
+                "db_port": 5432,
+                "env": "production",
+                "role": "database"
+            },
+            "tools": {
+                "ansible_connection": "local",
+                "ansible_python_interpreter": "auto_silent"
+            },
+            "web1": {
+                "ansible_connection": "local",
+                "ansible_python_interpreter": "auto_silent",
+                "env": "production",
+                "http_port": 8080,
+                "packages": [
+                    "nginx",
+                    "certbot"
+                ],
+                "role": "frontend"
+            },
+            "web2": {
+                "ansible_connection": "local",
+                "ansible_python_interpreter": "auto_silent",
+                "env": "production",
+                "http_port": 8081,
+                "packages": [
+                    "nginx",
+                    "certbot"
+                ],
+                "role": "frontend"
+            }
+        },
+        "profile": "inventory_legacy"
+    },
+    "all": {
+        "children": [
+            "ungrouped",
+            "prod",
+            "standalone"
+        ]
+    },
+    "db": {
+        "hosts": [
+            "db1"
+        ]
+    },
+    "prod": {
+        "children": [
+            "web",
+            "db"
+        ]
+    },
+    "standalone": {
+        "hosts": [
+            "tools"
+        ]
+    },
+    "ungrouped": {
+        "hosts": [
+            "bastion"
+        ]
+    },
+    "web": {
+        "hosts": [
+            "web1",
+            "web2"
+        ]
+    }
+}
