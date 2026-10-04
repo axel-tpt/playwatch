@@ -145,3 +145,9 @@ go vet ./... && golangci-lint run     # checks
 - [x] Run history, replay and reruns
 - [x] Run options: limit, tags, check, diff, extra vars, Vault
 - [ ] Extras: ad-hoc commands, `:modules` (ansible-doc), `:roles`, facts, `$EDITOR`, user configuration
+
+## License
+
+Copyright 2026 Axel TREPOUT
+
+playwatch is licensed under the [Apache License 2.0](LICENSE).
