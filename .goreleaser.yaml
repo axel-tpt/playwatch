@@ -26,6 +26,7 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - README.md
+      - LICENSE
 
 checksum:
   name_template: checksums.txt
@@ -36,6 +37,7 @@ nfpms:
     homepage: https://github.com/axel-tpt/playwatch
     maintainer: axel-tpt <axel.trepout@gmail.com>
     description: A k9s-style terminal UI for Ansible.
+    license: Apache-2.0
     formats: [deb, rpm, apk]
     bindir: /usr/bin
     # Ansible must be in $PATH at runtime; package names differ between
