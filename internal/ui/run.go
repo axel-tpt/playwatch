@@ -30,7 +30,8 @@ var (
 // RunView shows a task × host matrix: live for a run of this session, or
 // replayed from the store for a past run.
 type RunView struct {
-	ctx    context.Context
+	parent context.Context // outlives the run: used for views opened from this one
+	ctx    context.Context // the run itself, cancelled once it is over
 	cancel context.CancelFunc
 	env    RunEnv
 	info   RunInfo
@@ -96,8 +97,10 @@ func (m runTickMsg) Target() View    { return m.view }
 func (m replayLoaded) Target() View  { return m.view }
 
 func newRunView(ctx context.Context, env RunEnv, info RunInfo) *RunView {
-	ctx, cancel := context.WithCancel(ctx)
+	parent := ctx
+	ctx, cancel := context.WithCancel(parent)
 	v := &RunView{
+		parent: parent,
 		ctx:    ctx,
 		cancel: cancel,
 		env:    env,
@@ -329,12 +332,12 @@ func (v *RunView) Update(msg tea.Msg) tea.Cmd {
 			if v.info.State.Active() {
 				return Info("the run is still in progress")
 			}
-			return Rerun(v.ctx, v.env, v.info, false)
+			return Rerun(v.parent, v.env, v.info, false)
 		case key.Matches(msg, keyRerunFail):
 			if v.info.State.Active() {
 				return Info("the run is still in progress")
 			}
-			return Rerun(v.ctx, v.env, v.info, true)
+			return Rerun(v.parent, v.env, v.info, true)
 		}
 	}
 	return v.table.Update(msg)
@@ -344,10 +347,10 @@ func (v *RunView) outputView() *TextView {
 	title := "output " + v.info.Label()
 	if v.replay {
 		st, id := v.env.Store, v.info.StoreID
-		return NewTextView(v.ctx, title, func(context.Context) (string, error) { return st.Output(id) })
+		return NewTextView(v.parent, title, func(context.Context) (string, error) { return st.Output(id) })
 	}
 	out := v.output
-	return NewTextView(v.ctx, title, func(context.Context) (string, error) { return out.String(), nil })
+	return NewTextView(v.parent, title, func(context.Context) (string, error) { return out.String(), nil })
 }
 
 // Rerun opens the run form prefilled with info's playbook, inventories and
@@ -597,7 +600,7 @@ func (v *RunView) openResult() tea.Cmd {
 		if b.Len() == 0 {
 			return Info("no result yet for this task")
 		}
-		return Push(NewTextView(v.ctx, task, StaticText(b.String())))
+		return Push(NewTextView(v.parent, task, StaticText(b.String())))
 	}
 
 	host := v.hosts[col-1]
@@ -608,7 +611,7 @@ func (v *RunView) openResult() tea.Cmd {
 	case c.last.Type == "":
 		return Info(fmt.Sprintf("%s is still running on %s", task, host))
 	}
-	return Push(NewTextView(v.ctx, task+"@"+host, StaticText(describeResult(c))))
+	return Push(NewTextView(v.parent, task+"@"+host, StaticText(describeResult(c))))
 }
 
 // describeResult renders a task result: a short header, then the module's

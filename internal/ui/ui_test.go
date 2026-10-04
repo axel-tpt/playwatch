@@ -543,6 +543,33 @@ func TestRunIsRecordedAndReplayed(t *testing.T) {
 	}
 }
 
+// A finished run cancels its own context; views opened from it (rerun form,
+// output) must not inherit that cancelled context.
+func TestRerunAfterRunEndUsesLiveContext(t *testing.T) {
+	fakePlaybook(t)
+	v := NewRunView(context.Background(), storeEnv(t), "site.yml", ansible.RunOptions{}, nil)
+	v.SetSize(120, 30)
+	v.info.Started = time.Now()
+	runToEnd(t, v)
+	<-v.done
+	if v.ctx.Err() == nil {
+		t.Fatal("the run context should be cancelled once the run is over")
+	}
+
+	cmd := v.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
+	if cmd == nil {
+		t.Fatal("r on a finished run should open the run form")
+	}
+	push, ok := cmd().(pushMsg)
+	if !ok {
+		t.Fatalf("r returned %T, want pushMsg", cmd())
+	}
+	form := push.view.(*RunForm)
+	if err := form.ctx.Err(); err != nil {
+		t.Errorf("rerun form context is already done: %v", err)
+	}
+}
+
 func TestRerunFailed(t *testing.T) {
 	env := testEnv()
 	info := RunInfo{
