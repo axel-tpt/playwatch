@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/viewport"
@@ -21,7 +22,18 @@ type TextView struct {
 	filter  string
 	loading bool
 	vp      viewport.Model
+
+	// live, when set, makes the view reload itself until it is closed (the
+	// source stopped changing), keeping the end of the text in view unless the
+	// user scrolled up.
+	live <-chan struct{}
 }
+
+type textTickMsg struct{ view *TextView }
+
+func (m textTickMsg) Target() View { return m.view }
+
+const textTickInterval = 500 * time.Millisecond
 
 type textLoadedMsg struct {
 	view    *TextView
@@ -37,12 +49,30 @@ func NewTextView(ctx context.Context, title string, load func(ctx context.Contex
 	return &TextView{ctx: ctx, title: title, load: load, vp: viewport.New()}
 }
 
+// NewLiveTextView is like NewTextView but follows a source that is still
+// changing: the content is reloaded every half second until done is closed
+// (plus one last time), and the view sticks to the bottom like `tail -f`.
+func NewLiveTextView(ctx context.Context, title string, done <-chan struct{}, load func(ctx context.Context) (string, error)) *TextView {
+	v := NewTextView(ctx, title, load)
+	v.live = done
+	return v
+}
+
 // StaticText returns a loader for content that is already known.
 func StaticText(s string) func(context.Context) (string, error) {
 	return func(context.Context) (string, error) { return s, nil }
 }
 
-func (v *TextView) Init() tea.Cmd { return v.reload() }
+func (v *TextView) Init() tea.Cmd {
+	if v.live != nil {
+		return tea.Batch(v.reload(), v.tick())
+	}
+	return v.reload()
+}
+
+func (v *TextView) tick() tea.Cmd {
+	return tea.Tick(textTickInterval, func(time.Time) tea.Msg { return textTickMsg{view: v} })
+}
 
 func (v *TextView) reload() tea.Cmd {
 	v.loading = true
@@ -55,14 +85,28 @@ func (v *TextView) reload() tea.Cmd {
 
 func (v *TextView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case textTickMsg:
+		select {
+		case <-v.live:
+			return v.reload() // final reload, then stop ticking
+		default:
+		}
+		if v.loading {
+			return v.tick()
+		}
+		return tea.Batch(v.reload(), v.tick())
 	case textLoadedMsg:
 		v.loading = false
+		follow := v.live != nil && v.vp.AtBottom()
 		if msg.err != nil {
 			v.content = styleError.Render(msg.err.Error())
 		} else {
 			v.content = msg.content
 		}
 		v.render()
+		if follow {
+			v.vp.GotoBottom()
+		}
 		return nil
 	case tea.KeyPressMsg:
 		if key.Matches(msg, keyRefresh) {

@@ -350,7 +350,8 @@ func (v *RunView) outputView() *TextView {
 		return NewTextView(v.parent, title, func(context.Context) (string, error) { return st.Output(id) })
 	}
 	out := v.output
-	return NewTextView(v.parent, title, func(context.Context) (string, error) { return out.String(), nil })
+	// v.ctx is cancelled once the run is over: stop following then.
+	return NewLiveTextView(v.parent, title, v.ctx.Done(), func(context.Context) (string, error) { return out.String(), nil })
 }
 
 // Rerun opens the run form prefilled with info's playbook, inventories and
