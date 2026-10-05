@@ -37,6 +37,9 @@ type PlaybookOptions struct {
 	// (--vault-password-file /dev/fd/4): it never touches the disk. The
 	// caller may wipe it once RunPlaybook has returned.
 	VaultPassword []byte
+	// Color makes Ansible emit ANSI colors in Output even though it is not a
+	// terminal. Leave it off when the output goes to a file or a pipe.
+	Color bool
 }
 
 // vaultPasswordFD is the child's file descriptor carrying the vault password.
@@ -95,6 +98,9 @@ func (c *Client) RunPlaybook(ctx context.Context, opts PlaybookOptions) (*Run, e
 		"ANSIBLE_CALLBACKS_ENABLED="+callback.Name,
 		"PLAYWATCH_EVENTS_FD=3", // ExtraFiles[0] is fd 3 in the child
 	)
+	if opts.Color {
+		cmd.Env = append(cmd.Env, "ANSIBLE_NOCOLOR=0", "ANSIBLE_FORCE_COLOR=1")
+	}
 	cmd.ExtraFiles = []*os.File{pw} // fd 3
 	if vaultR != nil {
 		cmd.ExtraFiles = append(cmd.ExtraFiles, vaultR) // fd 4

@@ -27,6 +27,19 @@ type TextView struct {
 	// source stopped changing), keeping the end of the text in view unless the
 	// user scrolled up.
 	live <-chan struct{}
+
+	// colorToggle enables the keyColor binding, which strips the ANSI styles
+	// from the content while plain is set.
+	colorToggle bool
+	plain       bool
+}
+
+var keyColor = key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "toggle colors"))
+
+// WithColorToggle lets the user switch the content's ANSI colors on and off.
+func (v *TextView) WithColorToggle() *TextView {
+	v.colorToggle = true
+	return v
 }
 
 type textTickMsg struct{ view *TextView }
@@ -112,6 +125,11 @@ func (v *TextView) Update(msg tea.Msg) tea.Cmd {
 		if key.Matches(msg, keyRefresh) {
 			return v.reload()
 		}
+		if v.colorToggle && key.Matches(msg, keyColor) {
+			v.plain = !v.plain
+			v.render()
+			return nil
+		}
 		if key.Matches(msg, tableKeys.Top) {
 			v.vp.GotoTop()
 			return nil
@@ -128,6 +146,9 @@ func (v *TextView) Update(msg tea.Msg) tea.Cmd {
 
 func (v *TextView) render() {
 	content := v.content
+	if v.plain {
+		content = ansi.Strip(content)
+	}
 	if v.filter != "" {
 		needle := strings.ToLower(v.filter)
 		var kept []string
@@ -151,7 +172,12 @@ func (v *TextView) View() string {
 func (v *TextView) Title() string { return v.title }
 
 func (v *TextView) KeyMap() []key.Binding {
-	return []key.Binding{tableKeys.Up, tableKeys.Down, tableKeys.PageUp, tableKeys.PageDown, tableKeys.Top, tableKeys.Bottom, keyRefresh}
+	// The status line only shows the first few hints: put the specific keys first.
+	var keys []key.Binding
+	if v.colorToggle {
+		keys = append(keys, keyColor)
+	}
+	return append(keys, keyRefresh, tableKeys.Up, tableKeys.Down, tableKeys.PageUp, tableKeys.PageDown, tableKeys.Top, tableKeys.Bottom)
 }
 
 func (v *TextView) SetSize(width, height int) {

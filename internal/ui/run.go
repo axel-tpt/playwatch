@@ -181,6 +181,7 @@ func (v *RunView) start() tea.Cmd {
 			Args:          info.Options.Args(),
 			Output:        out,
 			VaultPassword: password,
+			Color:         true, // shown in the raw output view, which renders ANSI
 		})
 		msg := runStartedMsg{view: v, err: err, recErr: recErr}
 		if rec != nil {
@@ -347,11 +348,11 @@ func (v *RunView) outputView() *TextView {
 	title := "output " + v.info.Label()
 	if v.replay {
 		st, id := v.env.Store, v.info.StoreID
-		return NewTextView(v.parent, title, func(context.Context) (string, error) { return st.Output(id) })
+		return NewTextView(v.parent, title, func(context.Context) (string, error) { return st.Output(id) }).WithColorToggle()
 	}
 	out := v.output
 	// v.ctx is cancelled once the run is over: stop following then.
-	return NewLiveTextView(v.parent, title, v.ctx.Done(), func(context.Context) (string, error) { return out.String(), nil })
+	return NewLiveTextView(v.parent, title, v.ctx.Done(), func(context.Context) (string, error) { return out.String(), nil }).WithColorToggle()
 }
 
 // Rerun opens the run form prefilled with info's playbook, inventories and
