@@ -296,7 +296,7 @@ func (a *App) top() View {
 
 // Layout: header, optional prompt line, framed body, status bar.
 func (a *App) bodySize() (int, int) {
-	h := a.height - 4 // header, status bar, top and bottom borders
+	h := a.height - a.headerHeight() - 3 // header, status bar, top and bottom borders
 	if a.mode != promptNone || a.confirm != nil {
 		h--
 	}
@@ -320,7 +320,7 @@ func (a *App) render() string {
 	if a.width <= 0 || a.height <= 0 {
 		return ""
 	}
-	lines := []string{a.headerLine()}
+	lines := a.header()
 	switch {
 	case a.confirm != nil:
 		lines = append(lines, " "+styleConfirm.Render(a.confirm.prompt))
@@ -334,17 +334,58 @@ func (a *App) render() string {
 	return strings.Join(lines, "\n")
 }
 
-func (a *App) headerLine() string {
-	parts := []string{styleHeader.Render(" playwatch")}
+// logo is the playwatch banner drawn at the top right of the header.
+var logo = []string{
+	"        .__                                                     .__",
+	"______  |  |   _____    ___.__.         _____     __      ____  |  |__",
+	"\\____ \\ |  |   \\__  \\  <   |  |__  _  __\\__  \\  _/  |_  _/ ___\\ |  |  \\",
+	"|  |_> >|  |    / __ \\_ \\___  |\\ \\/ \\/ / / __ \\_\\   __\\ \\  \\___ |   Y  \\",
+	"|   __/ |  |__ (____  / / ____| \\     / (____  / |  |    \\___  >|___|  /",
+	"|__|    |____/      \\/  \\/       \\/\\_/       \\/  |__|        \\/      \\/",
+}
+
+// headerInfo returns the left column of the header: one line per context
+// entry, then the run counter.
+func (a *App) headerInfo() []string {
+	var lines []string
 	for _, kv := range a.cfg.Context {
-		parts = append(parts, styleHeaderLabel.Render(kv[0]+":")+" "+kv[1])
+		lines = append(lines, " "+styleHeaderLabel.Render(kv[0]+":")+" "+kv[1])
 	}
 	if a.cfg.Runs != nil {
 		if n := a.cfg.Runs.Active(); n > 0 {
-			parts = append(parts, StatusStyle(ansible.StatusRunning).Render(fmt.Sprintf("%d run(s) in progress", n)))
+			lines = append(lines, " "+StatusStyle(ansible.StatusRunning).Render(fmt.Sprintf("%d run(s) in progress", n)))
 		}
 	}
-	return fit(strings.Join(parts, "  "), a.width)
+	return lines
+}
+
+func (a *App) headerHeight() int {
+	return max(len(logo), len(a.headerInfo()))
+}
+
+func (a *App) header() []string {
+	info := a.headerInfo()
+	logoW := 0
+	for _, l := range logo {
+		logoW = max(logoW, ansi.StringWidth(l))
+	}
+	lines := make([]string, max(len(logo), len(info)))
+	for i := range lines {
+		left, right := "", ""
+		if i < len(info) {
+			left = info[i]
+		}
+		if i < len(logo) {
+			right = styleHeader.Render(logo[i])
+		}
+		if a.width < logoW+ansi.StringWidth(left)+2 {
+			lines[i] = fit(left, a.width)
+			continue
+		}
+		pad := a.width - ansi.StringWidth(left) - logoW - 1
+		lines[i] = left + strings.Repeat(" ", pad) + right
+	}
+	return lines
 }
 
 func (a *App) frame() []string {
