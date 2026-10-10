@@ -38,7 +38,7 @@ nfpms:
     # is a stable URL.
     file_name_template: "{{ .PackageName }}_{{ .Os }}_{{ .Arch }}"
     homepage: https://github.com/axel-tpt/playwatch
-    maintainer: axel-tpt <axel.trepout@gmail.com>
+    maintainer: axel-tpt <axel.trepout@outlook.com>
     description: A k9s-style terminal UI for Ansible.
     license: Apache-2.0
     formats: [deb, rpm, apk]
