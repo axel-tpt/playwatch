@@ -34,6 +34,9 @@ checksum:
 nfpms:
   - id: packages
     package_name: playwatch
+    # No version in the file name, so that .../releases/latest/download/<file>
+    # is a stable URL.
+    file_name_template: "{{ .PackageName }}_{{ .Os }}_{{ .Arch }}"
     homepage: https://github.com/axel-tpt/playwatch
     maintainer: axel-tpt <axel.trepout@gmail.com>
     description: A k9s-style terminal UI for Ansible.
