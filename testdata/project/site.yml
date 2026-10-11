@@ -1,0 +1,54 @@
+# Debug-only playbook: no system changes. It exercises every event type the
+# playwatch callback emits (ok, changed, skipped, failed, ignored, loops, no_log,
+# handlers). web2 fails on purpose, so the run exits with code 2.
+- name: Web tier
+  hosts: web
+  gather_facts: false
+  tasks:
+    - name: Show role
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} is {{ role }} on port {{ http_port }}"
+
+    - name: Pretend to reconfigure
+      ansible.builtin.debug:
+        msg: "reconfiguring {{ inventory_hostname }}"
+      changed_when: true
+      notify: Pretend to reload
+
+    - name: Loop over packages
+      ansible.builtin.debug:
+        msg: "package {{ item }}"
+      loop: "{{ packages }}"
+
+    - name: Only on web1
+      ansible.builtin.debug:
+        msg: "web1 only"
+      when: inventory_hostname == 'web1'
+
+    - name: Tolerated failure
+      ansible.builtin.fail:
+        msg: "this failure is ignored"
+      ignore_errors: true
+
+    - name: Secret task
+      ansible.builtin.debug:
+        msg: "the secret is {{ 'hunter2' }}"
+      no_log: true
+
+    - name: Fail on web2
+      ansible.builtin.fail:
+        msg: "web2 is broken"
+      when: inventory_hostname == 'web2'
+
+  handlers:
+    - name: Pretend to reload
+      ansible.builtin.debug:
+        msg: "reloading {{ inventory_hostname }}"
+
+- name: Database tier
+  hosts: db
+  gather_facts: false
+  tasks:
+    - name: Show role
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} is {{ role }} on port {{ db_port }}"

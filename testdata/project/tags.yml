@@ -1,0 +1,51 @@
+# Debug-only playbook exercising tags (-t / --skip-tags): play-level, task-level,
+# multiple tags per task, and the special `always` / `never` tags. The short waits
+# make the raw output visibly stream during a run. No system changes.
+- name: Tagged play
+  hosts: web
+  gather_facts: false
+  tasks:
+    - name: Install step
+      ansible.builtin.debug:
+        msg: "install on {{ inventory_hostname }}"
+      tags: [install, setup]
+
+    - name: Configure step
+      ansible.builtin.debug:
+        msg: "configure on {{ inventory_hostname }}"
+      tags: [configure, setup]
+
+    - name: Short wait
+      ansible.builtin.wait_for:
+        timeout: 2
+      tags: [slow]
+
+    - name: Deploy step
+      ansible.builtin.debug:
+        msg: "deploy on {{ inventory_hostname }}"
+      tags: [deploy]
+
+    - name: Always runs (unless skipped explicitly)
+      ansible.builtin.debug:
+        msg: "always on {{ inventory_hostname }}"
+      tags: [always]
+
+    - name: Only when asked (-t debug_only)
+      ansible.builtin.debug:
+        msg: "never by default"
+      tags: [never, debug_only]
+
+- name: Tagged db play
+  hosts: db
+  gather_facts: false
+  tags: [db]
+  tasks:
+    - name: Db check
+      ansible.builtin.debug:
+        msg: "db check on {{ inventory_hostname }}"
+      tags: [check]
+
+    - name: Db migrate
+      ansible.builtin.debug:
+        msg: "db migrate on {{ inventory_hostname }}"
+      tags: [migrate]

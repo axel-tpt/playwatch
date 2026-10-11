@@ -1,0 +1,8 @@
+# Sleeps locally for a while: used to test run cancellation.
+- name: Slow play
+  hosts: web1
+  gather_facts: false
+  tasks:
+    - name: Wait
+      ansible.builtin.wait_for:
+        timeout: 60

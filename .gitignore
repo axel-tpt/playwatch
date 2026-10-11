@@ -2,3 +2,5 @@
 /dist/
 *.retry
 __pycache__/
+/testdata/docker
+CLAUDE.md

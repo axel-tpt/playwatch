@@ -1,0 +1,4 @@
+role: frontend
+packages:
+  - nginx
+  - certbot

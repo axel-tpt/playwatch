@@ -1,0 +1,36 @@
+# For the docker lab (testdata/docker): runs on real SSH hosts, with fact
+# gathering and the command / copy / file modules. Only touches /tmp inside the
+# containers.
+- name: Facts and commands
+  hosts: all
+  tags: [facts]
+  tasks:
+    - name: Show distribution
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} runs {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+
+    - name: Uptime
+      ansible.builtin.command: uptime
+      changed_when: false
+      tags: [command]
+
+- name: Files
+  hosts: web
+  tags: [files]
+  tasks:
+    - name: Write a marker
+      ansible.builtin.copy:
+        content: "{{ inventory_hostname }} on port {{ http_port }}\n"
+        dest: /tmp/playwatch-marker
+        mode: "0644"
+
+    - name: Stream some output
+      ansible.builtin.shell: for i in 1 2 3 4 5; do echo "step $i"; sleep 1; done
+      changed_when: false
+      tags: [slow]
+
+    - name: Clean up
+      ansible.builtin.file:
+        path: /tmp/playwatch-marker
+        state: absent
+      tags: [cleanup]
