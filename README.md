@@ -151,15 +151,6 @@ go test -tags integration ./...       # integration tests (need Ansible; localho
 go vet ./... && golangci-lint run     # checks
 ```
 
-## Roadmap
-
-- [x] Inventory: hosts, groups, host description
-- [x] Live runs with a task × host matrix
-- [x] Drill-down into task results
-- [x] Run history, replay and reruns
-- [x] Run options: limit, tags, check, diff, extra vars, Vault
-- [ ] Extras: ad-hoc commands, `:modules` (ansible-doc), `:roles`, facts, `$EDITOR`, user configuration
-
 ## License
 
 Copyright 2026 Axel TREPOUT
