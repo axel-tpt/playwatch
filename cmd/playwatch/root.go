@@ -122,7 +122,7 @@ func runUI(ctx context.Context, opts *options) error {
 	if inventory == "" {
 		inventory = "(ansible config)"
 	}
-	header := [][2]string{{"inventory", inventory}, {"project", dir}}
+	header := [][2]string{{"inventory", inventory}, {"project", dir}, {"version", version}}
 
 	st, err := openStore()
 	if err != nil {
