@@ -52,7 +52,7 @@ func TestIntegrationUnknownHost(t *testing.T) {
 }
 
 func TestIntegrationRunPlaybook(t *testing.T) {
-	run, err := projectClient().RunPlaybook(context.Background(), PlaybookOptions{Playbook: "site.yml"})
+	run, err := projectClient().RunPlaybook(context.Background(), PlaybookOptions{Playbook: "playbook/site.yml"})
 	if err != nil {
 		t.Fatalf("RunPlaybook: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestIntegrationRunPlaybook(t *testing.T) {
 func TestIntegrationRunPlaybookCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	run, err := projectClient().RunPlaybook(ctx, PlaybookOptions{Playbook: "slow.yml"})
+	run, err := projectClient().RunPlaybook(ctx, PlaybookOptions{Playbook: "playbook/slow.yml"})
 	if err != nil {
 		t.Fatalf("RunPlaybook: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestIntegrationRunPlaybookCancel(t *testing.T) {
 func TestIntegrationVaultPassword(t *testing.T) {
 	runVault := func(password string) (*Run, []Event) {
 		run, err := projectClient().RunPlaybook(context.Background(), PlaybookOptions{
-			Playbook:      "vault.yml",
+			Playbook: "playbook/vault.yml",
 			VaultPassword: []byte(password),
 		})
 		if err != nil {

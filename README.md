@@ -87,7 +87,7 @@ playwatch -i inventory.ini
 |---|---|---|
 | `:hosts` | Inventory hosts | `Enter`/`d`: groups, variables and recent runs of the host |
 | `:groups` | Inventory groups | `Enter`: hosts of the group, subgroups included |
-| `:playbooks` | YAML files of the project | `Enter`: hosts and tasks the playbook targets · `r`: run |
+| `:playbooks` | YAML files of `./playbook` (or `-p <dir>`; falls back to the project root if `./playbook` is missing) | `Enter`: hosts and tasks the playbook targets · `r`: run |
 | `:runs` | Run history of the project | `Enter`: open · `r`: rerun · `f`: rerun on failed hosts · `ctrl+d`: delete |
 
 ### Keys
@@ -132,7 +132,7 @@ The same features are available without the TUI:
 playwatch -i inventory.ini hosts            # list hosts
 playwatch -i inventory.ini groups           # list groups
 playwatch -i inventory.ini host web1        # variables of a host, as JSON
-playwatch -i inventory.ini run site.yml -l web -C -D -e "version=2"
+playwatch -i inventory.ini run playbook/site.yml -l web -C -D -e "version=2"
 playwatch runs                              # run history of the current project
 ```
 

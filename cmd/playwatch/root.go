@@ -22,6 +22,7 @@ var version = "dev"
 
 type options struct {
 	inventories []string
+	playbookDir string
 }
 
 func (o *options) client() *ansible.Client {
@@ -43,6 +44,9 @@ func newRootCmd() *cobra.Command {
 	}
 	root.PersistentFlags().StringSliceVarP(&opts.inventories, "inventory", "i", nil,
 		"inventory source (repeatable); defaults to Ansible's configuration")
+
+	root.PersistentFlags().StringVarP(&opts.playbookDir, "playbook-dir", "p", "",
+		"directory holding the playbooks, relative to the current directory (default \"playbook\", else the current directory)")
 
 	root.AddCommand(newHostsCmd(opts), newGroupsCmd(opts), newHostCmd(opts), newRunCmd(opts), newRunsCmd())
 	return root
@@ -128,7 +132,7 @@ func runUI(ctx context.Context, opts *options) error {
 	if err != nil {
 		header = append(header, [2]string{"history", "disabled (" + err.Error() + ")"})
 	}
-	env := resource.Env{Ctx: ctx, Client: opts.client(), Dir: dir, Runs: runs, Store: st}
+	env := resource.Env{Ctx: ctx, Client: opts.client(), Dir: dir, PlaybookDir: opts.playbookDir, Runs: runs, Store: st}
 	return ui.Run(ctx, ui.Config{
 		Context:   header,
 		Resources: resource.All(env),

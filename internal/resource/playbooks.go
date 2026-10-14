@@ -48,7 +48,7 @@ func Playbooks(env Env) ui.Resource {
 			{Title: "modified"},
 		},
 		Load: func(context.Context) ([]ui.Row, error) {
-			return listPlaybooks(env.Dir)
+			return listPlaybooks(env.Dir, env.PlaybookDir)
 		},
 		Enter: func(row ui.Row) tea.Cmd {
 			return ui.Push(ui.NewTextView(env.Ctx, row.ID, func(ctx context.Context) (string, error) {
@@ -61,9 +61,30 @@ func Playbooks(env Env) ui.Resource {
 	}
 }
 
-func listPlaybooks(dir string) ([]ui.Row, error) {
-	if dir == "" {
-		dir = "."
+// DefaultPlaybookDir is where playbooks are looked up, relative to the
+// project directory, unless overridden.
+const DefaultPlaybookDir = "playbook"
+
+// listPlaybooks lists the playbooks of playbookDir (relative to projectDir
+// unless absolute). When playbookDir is empty the default directory is used,
+// falling back to the project root if it does not exist. Row IDs are paths
+// relative to projectDir (where ansible-playbook runs) when possible.
+func listPlaybooks(projectDir, playbookDir string) ([]ui.Row, error) {
+	if projectDir == "" {
+		projectDir = "."
+	}
+	explicit := playbookDir != ""
+	if !explicit {
+		playbookDir = DefaultPlaybookDir
+	}
+	dir := playbookDir
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(projectDir, dir)
+	}
+	if !explicit {
+		if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+			dir = projectDir
+		}
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -80,7 +101,11 @@ func listPlaybooks(dir string) ([]ui.Row, error) {
 		if err != nil {
 			continue
 		}
-		rows = append(rows, ui.Row{ID: name, Cells: []string{
+		id := filepath.Join(dir, name)
+		if rel, err := filepath.Rel(projectDir, id); err == nil && !strings.HasPrefix(rel, "..") {
+			id = rel
+		}
+		rows = append(rows, ui.Row{ID: id, Cells: []string{
 			name,
 			fmt.Sprintf("%d B", info.Size()),
 			info.ModTime().Format(time.DateTime),

@@ -19,8 +19,11 @@ type Env struct {
 	Client *ansible.Client
 	// Dir is the absolute Ansible project directory (where playbooks are
 	// looked up, and the scope of the run history).
-	Dir  string
-	Runs *ui.RunList
+	Dir string
+	// PlaybookDir is where playbooks are listed from (relative to Dir unless
+	// absolute); empty means DefaultPlaybookDir.
+	PlaybookDir string
+	Runs        *ui.RunList
 	// Store persists runs; nil disables persistence.
 	Store *store.Store
 }
