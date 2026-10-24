@@ -46,7 +46,7 @@ cd my-ansible-project
 playwatch -i inventory.ini
 ```
 
-Switch views with `:hosts`, `:groups`, `:playbooks` and `:runs`, filter with `/`, press `r` on a playbook to run it, and `?` for help.
+Switch views with `:hosts`, `:groups`, `:playbooks`, `:roles` and `:runs`, filter with `/`, press `r` on a playbook to run it, and `?` for help.
 
 ## Documentation
 

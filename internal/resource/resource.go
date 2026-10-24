@@ -39,6 +39,7 @@ func All(env Env) []ui.Resource {
 		Hosts(env, ""),
 		Groups(env),
 		Playbooks(env),
+		Roles(env),
 		Runs(env),
 	}
 }
