@@ -65,19 +65,17 @@ func Playbooks(env Env) ui.Resource {
 // project directory, unless overridden.
 const DefaultPlaybookDir = "playbook"
 
-// listPlaybooks lists the playbooks of playbookDir (relative to projectDir
-// unless absolute). When playbookDir is empty the default directory is used,
-// falling back to the project root if it does not exist. Row IDs are paths
-// relative to projectDir (where ansible-playbook runs) when possible.
-func listPlaybooks(projectDir, playbookDir string) ([]ui.Row, error) {
+// playbookDir resolves the directory playbooks are listed from: playbookDir
+// (relative to projectDir unless absolute) or, when empty, DefaultPlaybookDir
+// falling back to projectDir if it does not exist.
+func playbookDir(projectDir, dir string) string {
 	if projectDir == "" {
 		projectDir = "."
 	}
-	explicit := playbookDir != ""
+	explicit := dir != ""
 	if !explicit {
-		playbookDir = DefaultPlaybookDir
+		dir = DefaultPlaybookDir
 	}
-	dir := playbookDir
 	if !filepath.IsAbs(dir) {
 		dir = filepath.Join(projectDir, dir)
 	}
@@ -86,6 +84,17 @@ func listPlaybooks(projectDir, playbookDir string) ([]ui.Row, error) {
 			dir = projectDir
 		}
 	}
+	return dir
+}
+
+// listPlaybooks lists the playbooks of the directory resolved by playbookDir.
+// Row IDs are paths relative to projectDir (where ansible-playbook runs) when
+// possible.
+func listPlaybooks(projectDir, pbDir string) ([]ui.Row, error) {
+	if projectDir == "" {
+		projectDir = "."
+	}
+	dir := playbookDir(projectDir, pbDir)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("list playbooks: %w", err)

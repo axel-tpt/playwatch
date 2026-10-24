@@ -135,3 +135,13 @@ func TestIntegrationVaultPassword(t *testing.T) {
 		t.Error("a wrong vault password should fail the run")
 	}
 }
+
+func TestIntegrationRolesPath(t *testing.T) {
+	paths, err := projectClient().RolesPath(context.Background())
+	if err != nil {
+		t.Fatalf("RolesPath: %v", err)
+	}
+	if len(paths) == 0 {
+		t.Error("empty roles path")
+	}
+}

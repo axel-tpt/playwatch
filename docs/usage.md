@@ -31,6 +31,9 @@ playwatch -i inventory.ini
 | `:groups` | Inventory groups | `Enter`: hosts of the group, subgroups included |
 | `:playbooks` | YAML files of `./playbook` (or `-p <dir>`; falls back to the project root if `./playbook` is missing) | `Enter`: hosts and tasks the playbook targets · `r`: run |
 | `:runs` | Run history of the project | `Enter`: open · `r`: rerun · `f`: rerun on failed hosts · `ctrl+d`: delete |
+| `:roles` | Roles found in `roles/` (playbook directory and project) and in Ansible's `roles_path` | `Enter`: view `tasks/main.yml` · `e`: edit it in `$EDITOR` |
+
+`e` uses `$EDITOR` (split on whitespace, e.g. `code -w`); the TUI is suspended while it runs.
 
 ## Keys
 
