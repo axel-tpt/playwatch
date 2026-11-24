@@ -61,40 +61,61 @@ func Playbooks(env Env) ui.Resource {
 	}
 }
 
-// DefaultPlaybookDir is where playbooks are looked up, relative to the
+// DefaultPlaybookDirs are where playbooks are looked up, relative to the
 // project directory, unless overridden.
-const DefaultPlaybookDir = "playbook"
+var DefaultPlaybookDirs = []string{"playbook", "playbooks"}
 
-// playbookDir resolves the directory playbooks are listed from: playbookDir
-// (relative to projectDir unless absolute) or, when empty, DefaultPlaybookDir
-// falling back to projectDir if it does not exist.
-func playbookDir(projectDir, dir string) string {
+// playbookDirs resolves the directories playbooks are listed from: dir
+// (relative to projectDir unless absolute) when set, otherwise every existing
+// DefaultPlaybookDirs entry, falling back to projectDir if none exists.
+func playbookDirs(projectDir, dir string) []string {
 	if projectDir == "" {
 		projectDir = "."
 	}
-	explicit := dir != ""
-	if !explicit {
-		dir = DefaultPlaybookDir
+	if dir != "" {
+		if !filepath.IsAbs(dir) {
+			dir = filepath.Join(projectDir, dir)
+		}
+		return []string{dir}
 	}
-	if !filepath.IsAbs(dir) {
-		dir = filepath.Join(projectDir, dir)
-	}
-	if !explicit {
-		if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
-			dir = projectDir
+	var dirs []string
+	for _, d := range DefaultPlaybookDirs {
+		d = filepath.Join(projectDir, d)
+		if fi, err := os.Stat(d); err == nil && fi.IsDir() {
+			dirs = append(dirs, d)
 		}
 	}
-	return dir
+	if len(dirs) == 0 {
+		dirs = []string{projectDir}
+	}
+	return dirs
 }
 
-// listPlaybooks lists the playbooks of the directory resolved by playbookDir.
+// playbookDir returns the primary playbook directory (the first of
+// playbookDirs).
+func playbookDir(projectDir, dir string) string {
+	return playbookDirs(projectDir, dir)[0]
+}
+
+// listPlaybooks lists the playbooks of the directories resolved by playbookDirs.
 // Row IDs are paths relative to projectDir (where ansible-playbook runs) when
 // possible.
 func listPlaybooks(projectDir, pbDir string) ([]ui.Row, error) {
 	if projectDir == "" {
 		projectDir = "."
 	}
-	dir := playbookDir(projectDir, pbDir)
+	var rows []ui.Row
+	for _, dir := range playbookDirs(projectDir, pbDir) {
+		r, err := listPlaybooksIn(projectDir, dir)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, r...)
+	}
+	return rows, nil
+}
+
+func listPlaybooksIn(projectDir, dir string) ([]ui.Row, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("list playbooks: %w", err)

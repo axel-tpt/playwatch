@@ -46,7 +46,7 @@ func newRootCmd() *cobra.Command {
 		"inventory source (repeatable); defaults to Ansible's configuration")
 
 	root.PersistentFlags().StringVarP(&opts.playbookDir, "playbook-dir", "p", "",
-		"directory holding the playbooks, relative to the current directory (default \"playbook\", else the current directory)")
+		"directory holding the playbooks, relative to the current directory (default \"playbook\" and \"playbooks\", else the current directory)")
 
 	root.AddCommand(newHostsCmd(opts), newGroupsCmd(opts), newHostCmd(opts), newRunCmd(opts), newRunsCmd())
 	return root
