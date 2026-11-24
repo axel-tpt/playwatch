@@ -39,7 +39,7 @@ Other platforms and building from source: see [Installation](docs/installation.m
 
 ## Quick start
 
-Run playwatch from your Ansible project directory (playbooks in `./playbook`, or set another directory with `-p`):
+Run playwatch from your Ansible project directory (playbooks in `./playbook` and/or `./playbooks`, or set another directory with `-p`):
 
 ```bash
 cd my-ansible-project
