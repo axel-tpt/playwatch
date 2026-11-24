@@ -1,0 +1,40 @@
+{
+ "jobs": [
+  {
+   "id": "001-runs-auto-refresh",
+   "title": ":runs auto-refresh",
+   "branch": "factory/001-runs-auto-refresh",
+   "stage": "needs-human",
+   "round": 1,
+   "rounds": [
+    {
+     "security": "PASS",
+     "ux": "PASS",
+     "ui": "PASS",
+     "code": "PASS"
+    }
+   ],
+   "decision": "ESCALATE",
+   "note": "Code OK; CLAUDE.md \"Points ouverts\" line must be removed by a human",
+   "updated": "2026-10-25T00:11:54+02:00"
+  },
+  {
+   "id": "002-roles-view",
+   "title": ":roles view",
+   "branch": "factory/002-roles-view",
+   "stage": "merged",
+   "round": 1,
+   "rounds": [
+    {
+     "security": "PASS",
+     "ux": "PASS",
+     "ui": "PASS",
+     "code": "PASS"
+    }
+   ],
+   "decision": "APPROVE",
+   "note": "merged into main, tests pass",
+   "updated": "2026-10-25T00:24:24+02:00"
+  }
+ ]
+}

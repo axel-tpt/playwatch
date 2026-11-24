@@ -3,8 +3,3 @@
 *.retry
 __pycache__/
 /testdata/docker
-CLAUDE.md
-# factory runtime state
-/factory/board.json
-/factory/jobs/
-/.worktrees/

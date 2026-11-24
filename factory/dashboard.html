@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>playwatch factory</title>
+<style>
+  :root {
+    --bg: #f6f6f3; --surface: #ffffff; --sunk: #efefeb; --line: #e2e2dc;
+    --text: #1c1c1e; --muted: #6e6e73; --faint: #a1a1a6;
+    --accent: #3a5bd9;
+    --pass: #1e7d47; --pass-bg: #e2f3e8;
+    --changes: #a95a00; --changes-bg: #fcefd9;
+    --human: #c2410c; --human-bg: #fff1e8;
+    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141416; --surface: #1d1d20; --sunk: #18181b; --line: #2e2e33;
+      --text: #ececee; --muted: #9a9aa2; --faint: #5f5f66;
+      --accent: #8ea6ff;
+      --pass: #5fd08f; --pass-bg: #173323;
+      --changes: #f2b25c; --changes-bg: #3a2a12;
+      --human: #ff8a4c; --human-bg: #3a1f12;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141416; --surface: #1d1d20; --sunk: #18181b; --line: #2e2e33;
+    --text: #ececee; --muted: #9a9aa2; --faint: #5f5f66;
+    --accent: #8ea6ff;
+    --pass: #5fd08f; --pass-bg: #173323;
+    --changes: #f2b25c; --changes-bg: #3a2a12;
+    --human: #ff8a4c; --human-bg: #3a1f12;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 18px 24px 10px;
+  }
+  h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
+  h1 span { color: var(--muted); font-weight: 500; }
+  .live { margin-left: auto; color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pass); }
+  .live.stale .dot { background: var(--human); }
+  .flow { padding: 0 24px 14px; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+
+  .banner {
+    margin: 0 24px 14px; padding: 10px 14px; border-radius: 10px;
+    background: var(--human-bg); color: var(--human); font-weight: 600;
+  }
+  .banner code { font-weight: 500; }
+
+  .board {
+    display: grid; grid-template-columns: repeat(6, minmax(210px, 1fr));
+    gap: 12px; padding: 0 24px 24px; overflow-x: auto; align-items: start;
+  }
+  .col { background: var(--sunk); border-radius: 12px; padding: 10px; min-height: 140px; }
+  .col.human { background: var(--human-bg); }
+  .col-head { display: flex; align-items: baseline; gap: 6px; padding: 2px 4px 10px; }
+  .col-head b { font-size: 13px; }
+  .col-head small { color: var(--muted); font-size: 11px; }
+  .col-head .n { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .col.human .col-head b, .col.human .col-head .n { color: var(--human); }
+
+  .card {
+    display: block; width: 100%; text-align: left; font: inherit; color: inherit;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 11px; margin-bottom: 8px; cursor: pointer; box-shadow: var(--shadow);
+    transition: border-color .15s, transform .15s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card.human { border-color: var(--human); box-shadow: 0 0 0 3px color-mix(in srgb, var(--human) 18%, transparent); }
+  .card.merged { opacity: .65; }
+  .card .id { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .card .title { font-weight: 600; margin: 2px 0 6px; }
+  .card .note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .card.human .note { color: var(--human); }
+
+  .rounds { display: grid; gap: 4px; }
+  .round { display: flex; align-items: center; gap: 4px; }
+  .round .r { font-family: var(--mono); font-size: 10px; color: var(--faint); width: 20px; }
+  .chip {
+    font-size: 10.5px; padding: 1px 6px; border-radius: 999px; line-height: 16px;
+    border: 1px dashed var(--faint); color: var(--muted); white-space: nowrap;
+  }
+  .chip.PASS { border: 1px solid transparent; background: var(--pass-bg); color: var(--pass); }
+  .chip.CHANGES { border: 1px solid transparent; background: var(--changes-bg); color: var(--changes); }
+  .chip.live { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .chip.live { animation: none; } }
+
+  .empty { color: var(--faint); font-size: 12px; padding: 4px; }
+  .hint { padding: 40px 24px; color: var(--muted); text-align: center; }
+  code { font-family: var(--mono); font-size: .92em; }
+
+  /* Drawer */
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(780px, 100%);
+    background: var(--surface); border-left: 1px solid var(--line);
+    transform: translateX(100%); transition: transform .2s ease; display: flex; flex-direction: column;
+  }
+  .open .scrim { opacity: 1; pointer-events: auto; }
+  .open .drawer { transform: none; }
+  .d-head { padding: 16px 20px 12px; border-bottom: 1px solid var(--line); }
+  .d-head .id { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .d-head h2 { margin: 2px 0 4px; font-size: 18px; }
+  .d-head .meta { color: var(--muted); font-size: 12px; }
+  .close { float: right; border: 0; background: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; }
+  .d-body { display: grid; grid-template-columns: 170px 1fr; flex: 1; min-height: 0; }
+  .files { border-right: 1px solid var(--line); overflow-y: auto; padding: 10px 8px; }
+  .files h4 { margin: 10px 8px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); }
+  .files button {
+    display: flex; justify-content: space-between; width: 100%; border: 0; background: none;
+    font: inherit; color: var(--text); text-align: left; padding: 5px 8px; border-radius: 6px; cursor: pointer;
+  }
+  .files button:hover { background: var(--sunk); }
+  .files button.on { background: var(--sunk); font-weight: 600; }
+  .files button .v { font-size: 11px; }
+  .v.PASS, .v.APPROVE { color: var(--pass); }
+  .v.CHANGES { color: var(--changes); }
+  .v.ESCALATE, .v.BLOCKED { color: var(--human); }
+  .doc { overflow-y: auto; padding: 18px 24px 40px; }
+  .doc h1, .doc h2, .doc h3 { line-height: 1.25; margin: 1.2em 0 .4em; }
+  .doc h1 { font-size: 20px; margin-top: 0; } .doc h2 { font-size: 16px; } .doc h3 { font-size: 14px; }
+  .doc pre { background: var(--sunk); padding: 10px 12px; border-radius: 8px; overflow-x: auto; font-size: 12.5px; }
+  .doc :not(pre) > code { background: var(--sunk); padding: 1px 4px; border-radius: 4px; }
+  .doc ul, .doc ol { padding-left: 22px; }
+  .doc li.task { list-style: none; margin-left: -18px; }
+  .doc blockquote { margin: 0; padding-left: 12px; border-left: 3px solid var(--line); color: var(--muted); }
+  .doc table { border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+  .doc th, .doc td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; }
+  .doc a { color: var(--accent); }
+  .verdict { display: inline-block; font-weight: 700; padding: 3px 10px; border-radius: 6px; margin-bottom: 8px; }
+  .verdict.PASS, .verdict.APPROVE { background: var(--pass-bg); color: var(--pass); }
+  .verdict.CHANGES { background: var(--changes-bg); color: var(--changes); }
+  .verdict.ESCALATE, .verdict.BLOCKED { background: var(--human-bg); color: var(--human); }
+  .missing { color: var(--faint); font-style: italic; }
+
+  @media (max-width: 760px) {
+    header, .flow { padding-left: 16px; padding-right: 16px; }
+    .banner { margin: 0 16px 12px; }
+    .board { grid-template-columns: 1fr; padding: 0 16px 16px; }
+    .col { min-height: 0; }
+    .d-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .files { border-right: 0; border-bottom: 1px solid var(--line); max-height: 35vh; }
+    .doc { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>playwatch <span>factory</span></h1>
+  <div class="live" id="live"><span class="dot"></span><span id="ago">connecting…</span></div>
+</header>
+<div class="flow">feature → spec-writer → builder ⇄ security · ux · ui · code → approver → main | needs-human</div>
+<div id="banner"></div>
+<main id="board" class="board"></main>
+
+<div id="shell">
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="d-head" id="d-head"></div>
+    <div class="d-body">
+      <nav class="files" id="files"></nav>
+      <article class="doc" id="doc"></article>
+    </div>
+  </aside>
+</div>
+
+<script>
+const STAGES = [
+  ["spec", "Spec", "spec-writer · opus"],
+  ["build", "Build", "builder · sonnet"],
+  ["review", "Review", "4 reviewers"],
+  ["approve", "Approve", "approver · opus"],
+  ["needs-human", "Needs human", "you"],
+  ["merged", "Merged", "main"],
+];
+const REVIEWERS = [["security", "sec"], ["ux", "ux"], ["ui", "ui"], ["code", "code"]];
+const VERDICT_RE = /^(?:VERDICT:\s*)?(PASS|CHANGES|APPROVE|ESCALATE|BLOCKED)\b:?\s*(.*)$/;
+
+let board = { jobs: [] }, lastText = "", lastOk = 0;
+let openJob = null, openFile = null;
+const cache = {};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// ---------- board ----------
+
+async function poll() {
+  try {
+    const res = await fetch("board.json", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const text = await res.text();
+    lastOk = Date.now();
+    if (text !== lastText) {
+      board = JSON.parse(text); // a half-written file throws: keep the last good board
+      lastText = text;
+      for (const k in cache) delete cache[k]; // files may have changed with the board
+      render();
+      if (openJob) renderDrawer();
+    }
+  } catch (e) {
+    if (!lastOk) $("board").innerHTML = `<div class="hint">Can't read <code>board.json</code>. Serve this folder: <code>cd factory && python3 -m http.server 8000</code></div>`;
+  }
+  tick();
+}
+
+function tick() {
+  const s = lastOk ? Math.round((Date.now() - lastOk) / 1000) : null;
+  $("ago").textContent = s === null ? "offline" : s < 3 ? "live" : `updated ${s}s ago`;
+  $("live").classList.toggle("stale", s === null || s > 10);
+}
+
+function chips(job) {
+  const rounds = job.rounds || [];
+  if (!rounds.length) return "";
+  return `<div class="rounds">` + rounds.map((r, i) => {
+    const current = i === rounds.length - 1 && job.stage === "review";
+    const cs = REVIEWERS.map(([k, label]) => {
+      const v = r[k] || "pending";
+      const live = current && v === "pending" ? " live" : "";
+      return `<span class="chip ${esc(v)}${live}" title="${k}: ${esc(v)}">${label}</span>`;
+    });
+    if (r.human) cs.push(`<span class="chip ${esc(r.human)}" title="human: ${esc(r.human)}">you</span>`);
+    return `<div class="round"><span class="r">R${i + 1}</span>${cs.join("")}</div>`;
+  }).join("") + `</div>`;
+}
+
+function card(job) {
+  const cls = job.stage === "needs-human" ? "human" : job.stage === "merged" ? "merged" : "";
+  return `<button class="card ${cls}" data-id="${esc(job.id)}">
+    <div class="id">${esc(job.id)}</div>
+    <div class="title">${esc(job.title || job.id)}</div>
+    ${chips(job)}
+    ${job.note ? `<div class="note">${esc(job.note)}</div>` : ""}
+  </button>`;
+}
+
+function render() {
+  const jobs = board.jobs || [];
+  const waiting = jobs.filter((j) => j.stage === "needs-human");
+  $("banner").innerHTML = waiting.length
+    ? `<div class="banner">${waiting.length} job${waiting.length > 1 ? "s" : ""} need${waiting.length > 1 ? "" : "s"} you: ${waiting.map((j) => `<code>/factory approve ${esc(j.id)}</code>`).join(", ")} or <code>/factory rework &lt;id&gt; &lt;note&gt;</code></div>`
+    : "";
+  if (!jobs.length) {
+    $("board").innerHTML = `<div class="hint">No jobs yet. In Claude Code, run <code>/factory &lt;feature&gt;</code> or <code>/factory next</code>.</div>`;
+    return;
+  }
+  $("board").innerHTML = STAGES.map(([key, name, who]) => {
+    const here = jobs.filter((j) => j.stage === key);
+    if (key === "merged") here.reverse();
+    return `<section class="col ${key === "needs-human" ? "human" : ""}">
+      <div class="col-head"><b>${name}</b><small>${who}</small><span class="n">${here.length || ""}</span></div>
+      ${here.length ? here.map(card).join("") : `<div class="empty">—</div>`}
+    </section>`;
+  }).join("");
+}
+
+$("board").addEventListener("click", (e) => {
+  const c = e.target.closest(".card");
+  if (c) openDrawer(c.dataset.id, null);
+});
+
+// ---------- drawer ----------
+
+function filesOf(job) {
+  const groups = [["Job", [["feature.md", "feature"], ["spec.md", "spec"], ["build.md", "build"]]]];
+  (job.rounds || []).forEach((r, i) => {
+    const n = i + 1;
+    const f = REVIEWERS.map(([k]) => [`round-${n}/review-${k}.md`, k, r[k]]);
+    if (r.human) f.push([`round-${n}/rework-human.md`, "you", r.human]);
+    groups.push([`Round ${n}`, f]);
+  });
+  if (job.decision || ["approve", "needs-human", "merged"].includes(job.stage)) {
+    groups.push(["Decision", [["decision.md", "decision", job.decision]]]);
+  }
+  return groups;
+}
+
+function openDrawer(id, file) {
+  openJob = id;
+  openFile = file;
+  document.body.classList.add("open");
+  $("drawer").setAttribute("aria-hidden", "false");
+  history.replaceState(null, "", `#${encodeURIComponent(id)}${file ? "/" + file : ""}`);
+  renderDrawer();
+}
+
+function closeDrawer() {
+  openJob = null;
+  document.body.classList.remove("open");
+  $("drawer").setAttribute("aria-hidden", "true");
+  history.replaceState(null, "", location.pathname);
+}
+
+function renderDrawer() {
+  const job = (board.jobs || []).find((j) => j.id === openJob);
+  if (!job) return closeDrawer();
+  const groups = filesOf(job);
+  const all = groups.flatMap(([, f]) => f.map(([p]) => p));
+  if (!openFile || !all.includes(openFile)) {
+    // Default to the most recent file: decision, else last round's first change, else spec.
+    openFile = all.includes("decision.md") ? "decision.md" : job.round ? all.filter((p) => p.startsWith(`round-${job.round}/`))[0] : "spec.md";
+  }
+  const stageName = (STAGES.find(([k]) => k === job.stage) || [, job.stage])[1];
+  $("d-head").innerHTML = `<button class="close" id="close" aria-label="Close">×</button>
+    <div class="id">${esc(job.id)}</div>
+    <h2>${esc(job.title || job.id)}</h2>
+    <div class="meta">${esc(stageName)} · round ${job.round || 0} · <code>${esc(job.branch || "")}</code>${job.updated ? ` · ${esc(job.updated.replace("T", " ").slice(0, 16))}` : ""}</div>`;
+  $("close").onclick = closeDrawer;
+  $("files").innerHTML = groups.map(([g, f]) => `<h4>${g}</h4>` + f.map(([p, label, v]) =>
+    `<button data-p="${esc(p)}" class="${p === openFile ? "on" : ""}"><span>${esc(label)}</span>${v && v !== "pending" ? `<span class="v ${esc(v)}">${esc(v)}</span>` : ""}</button>`
+  ).join("")).join("");
+  loadFile(job.id, openFile);
+}
+
+$("files").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-p]");
+  if (b) openDrawer(openJob, b.dataset.p);
+});
+$("scrim").onclick = closeDrawer;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && openJob) closeDrawer(); });
+
+async function loadFile(id, path) {
+  const key = `${id}/${path}`;
+  if (!(key in cache)) {
+    try {
+      const res = await fetch(`jobs/${encodeURIComponent(id)}/${path}`, { cache: "no-store" });
+      cache[key] = res.ok ? await res.text() : null;
+    } catch { cache[key] = null; }
+  }
+  if (openJob !== id || openFile !== path) return;
+  const text = cache[key];
+  $("doc").innerHTML = text == null ? `<p class="missing">${esc(path)} is not written yet.</p>` : md(text);
+}
+
+// ---------- tiny markdown ----------
+
+function inline(s) {
+  return s.split(/(`[^`]+`)/).map((part) => {
+    if (/^`[^`]+`$/.test(part)) return `<code>${esc(part.slice(1, -1))}</code>`;
+    return esc(part)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[\s(])\*(?!\s)(.+?)\*(?=[\s).,:;!?]|$)/g, "$1<em>$2</em>")
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, t, u) => /^(https?:|#|\.{0,2}\/|[\w-]+\.md)/.test(u) ? `<a href="${u}" target="_blank" rel="noopener">${t}</a>` : m);
+  }).join("");
+}
+
+function md(src) {
+  const lines = src.replace(/\r/g, "").split("\n");
+  const out = [];
+  let i = 0, para = [], list = null;
+  const flushPara = () => { if (para.length) out.push(`<p>${inline(para.join(" "))}</p>`); para = []; };
+  const flushList = () => { if (list) out.push(`</${list}>`); list = null; };
+  const flush = () => { flushPara(); flushList(); };
+
+  // A leading verdict line becomes a badge.
+  while (i < lines.length && !lines[i].trim()) i++;
+  const v = (lines[i] || "").trim().match(VERDICT_RE);
+  if (v) { out.push(`<div class="verdict ${v[1]}">${v[1]}</div>${v[2] ? `<p>${inline(v[2])}</p>` : ""}`); i++; }
+
+  for (; i < lines.length; i++) {
+    const line = lines[i];
+    let m;
+    if (/^```/.test(line)) {
+      flush();
+      const code = [];
+      while (++i < lines.length && !/^```/.test(lines[i])) code.push(lines[i]);
+      out.push(`<pre><code>${esc(code.join("\n"))}</code></pre>`);
+    } else if ((m = line.match(/^(#{1,6})\s+(.*)/))) {
+      flush();
+      const n = Math.min(m[1].length, 3);
+      out.push(`<h${n}>${inline(m[2])}</h${n}>`);
+    } else if (/^\s*\|/.test(line)) {
+      flush();
+      const rows = [];
+      for (; i < lines.length && /^\s*\|/.test(lines[i]); i++) rows.push(lines[i]);
+      i--;
+      const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const body = rows.filter((r) => !/^\s*\|[\s:|-]+\|\s*$/.test(r)).map(cells);
+      out.push(`<table>${body.map((r, k) => `<tr>${r.map((c) => k ? `<td>${inline(c)}</td>` : `<th>${inline(c)}</th>`).join("")}</tr>`).join("")}</table>`);
+    } else if ((m = line.match(/^\s*([-*]|\d+\.)\s+(.*)/))) {
+      flushPara();
+      const kind = /\d/.test(m[1]) ? "ol" : "ul";
+      if (list !== kind) { flushList(); out.push(`<${kind}>`); list = kind; }
+      const t = m[2].match(/^\[([ xX])\]\s+(.*)/);
+      out.push(t ? `<li class="task">${t[1] === " " ? "☐" : "☑"} ${inline(t[2])}</li>` : `<li>${inline(m[2])}</li>`);
+    } else if ((m = line.match(/^>\s?(.*)/))) {
+      flush();
+      out.push(`<blockquote>${inline(m[1])}</blockquote>`);
+    } else if (!line.trim()) {
+      flush();
+    } else if (list && /^\s{2,}/.test(line)) {
+      out[out.length - 1] = out[out.length - 1].replace(/<\/li>$/, ` ${inline(line.trim())}</li>`);
+    } else {
+      flushList();
+      para.push(line.trim());
+    }
+  }
+  flush();
+  return out.join("\n");
+}
+
+// ---------- start ----------
+
+const initial = decodeURIComponent(location.hash.slice(1));
+poll().then(() => {
+  if (initial) {
+    const [id, ...rest] = initial.split("/");
+    if ((board.jobs || []).some((j) => j.id === id)) openDrawer(id, rest.join("/") || null);
+  }
+});
+setInterval(poll, 2000);
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
